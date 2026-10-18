@@ -33,11 +33,20 @@ def maximize_deliveries(time_windows):
         ]
         maximize_deliveries(time_windows) returns ['A', 'C']
     """
-    # TODO: Implement greedy algorithm for activity selection
-    # Hint: What greedy choice gives you the most room for future deliveries?
-    # Hint: Think about sorting by a specific attribute
-    
-    pass  # Delete this and write your code
+    # Sort deliveries by earliest finishing time
+    sorted_deliveries = sorted(time_windows, key=lambda delivery: delivery['end'])
+
+    # Store the IDs of selected deliveries
+    selected_deliveries = []
+    last_end_time = None
+
+    # Select deliveries that do not overlap
+    for delivery in sorted_deliveries:
+        if last_end_time is None or delivery['start'] >= last_end_time:
+            selected_deliveries.append(delivery['delivery_id'])
+            last_end_time = delivery['end']
+
+    return selected_deliveries
 
 
 # ============================================================================
@@ -72,11 +81,43 @@ def optimize_truck_load(packages, weight_limit):
         weight_limit = 50
         optimize_truck_load(packages, 50) returns packages A (full), B (full), C (partial)
     """
-    # TODO: Implement greedy algorithm for fractional knapsack
-    # Hint: What ratio determines which packages are most valuable per pound?
-    # Hint: You can take fractions - if you have 5 lbs capacity left and a 10 lb package, take 0.5 of it
-    
-    pass  # Delete this and write your code
+    # Sort packages by priority per pound, highest first
+    sorted_packages = sorted(
+        packages,
+        key=lambda package: package['priority'] / package['weight'],
+        reverse=True
+    )
+
+    total_priority = 0.0
+    total_weight = 0.0
+    selected_packages = []
+
+    # Greedily take each package, or the fraction that fits
+    for package in sorted_packages:
+        remaining_capacity = weight_limit - total_weight
+
+        if remaining_capacity <= 0:
+            break
+
+        if package['weight'] <= remaining_capacity:
+            fraction = 1.0
+            total_weight += package['weight']
+            total_priority += package['priority']
+        else:
+            fraction = remaining_capacity / package['weight']
+            total_weight += remaining_capacity
+            total_priority += package['priority'] * fraction
+
+        selected_packages.append({
+            'package_id': package['package_id'],
+            'fraction': fraction
+        })
+
+    return {
+        'total_priority': total_priority,
+        'total_weight': total_weight,
+        'packages': selected_packages
+    }
 
 
 # ============================================================================
@@ -108,11 +149,36 @@ def minimize_drivers(deliveries):
         ]
         minimize_drivers(deliveries) returns 2 drivers: [[A, C], [B]]
     """
-    # TODO: Implement greedy algorithm for interval scheduling
-    # Hint: How do you know if a delivery overlaps with another?
-    # Hint: Can you assign a delivery to an existing driver, or do you need a new one?
-    
-    pass  # Delete this and write your code
+    # Sort deliveries by start time
+    sorted_deliveries = sorted(
+        deliveries,
+        key=lambda delivery: delivery['start']
+    )
+
+    # Track when each driver becomes available
+    driver_end_times = []
+    assignments = []
+
+    # Assign each delivery to the first available driver
+    for delivery in sorted_deliveries:
+        assigned = False
+
+        for i, end_time in enumerate(driver_end_times):
+            if delivery['start'] >= end_time:
+                driver_end_times[i] = delivery['end']
+                assignments[i].append(delivery['delivery_id'])
+                assigned = True
+                break
+
+        # Create a new driver if none is available
+        if not assigned:
+            driver_end_times.append(delivery['end'])
+            assignments.append([delivery['delivery_id']])
+
+    return {
+        'num_drivers': len(driver_end_times),
+        'assignments': assignments
+    }
 
 
 # ============================================================================
@@ -297,9 +363,9 @@ if __name__ == "__main__":
     
     # Uncomment these as you complete each part:
     
-    # test_package_prioritization()
-    # test_truck_loading()
-    # test_driver_assignment()
-    # benchmark_scenarios()
+    test_package_prioritization()
+    test_truck_loading()
+    test_driver_assignment()
+    benchmark_scenarios()
     
     print("\n⚠ Uncomment the test functions in the main block to run tests!")
